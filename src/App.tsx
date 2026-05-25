@@ -3,19 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Camera, Upload, Loader2, Sparkles, RefreshCw, Scissors, UserCheck, Compass, CheckCircle, KeyRound } from 'lucide-react';
 import { HairstyleResult } from './types';
 import HairstyleCard from './components/HairstyleCard';
-
-async function getApiError(response: Response, fallback: string) {
-  const bodyText = await response.text().catch(() => '');
-  if (!bodyText) return `${fallback} (API ${response.status})`;
-
-  try {
-    const body = JSON.parse(bodyText);
-    return body.error || body.message || `${fallback} (API ${response.status})`;
-  } catch {
-    const compactBody = bodyText.replace(/\s+/g, ' ').slice(0, 180);
-    return `${fallback} (API ${response.status}): ${compactBody}`;
-  }
-}
+import { generateHairstyleSuggestions } from './geminiRest';
 
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
@@ -89,23 +77,8 @@ export default function App() {
     setLoading(true);
     setError(null);
 
-    const formData = new FormData();
-    formData.append('photo', file);
-
     try {
-      const response = await fetch('/api/generate-hairstyles', {
-        method: 'POST',
-        headers: {
-          'X-Gemini-Api-Key': apiKey,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(await getApiError(response, '髮型建議生成失敗'));
-      }
-
-      const data = await response.json();
+      const data = await generateHairstyleSuggestions(apiKey, file);
       setResult(data);
     } catch (err: any) {
       console.error('Error conducting analysis:', err);

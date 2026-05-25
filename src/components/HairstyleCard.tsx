@@ -2,19 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Loader2, RefreshCw, AlertCircle, Sparkles, CheckCircle, Download, Volume2, VolumeX } from 'lucide-react';
 import { Suggestion } from '../types';
-
-async function getApiError(response: Response, fallback: string) {
-  const bodyText = await response.text().catch(() => '');
-  if (!bodyText) return `${fallback} (API ${response.status})`;
-
-  try {
-    const body = JSON.parse(bodyText);
-    return body.error || body.message || `${fallback} (API ${response.status})`;
-  } catch {
-    const compactBody = bodyText.replace(/\s+/g, ' ').slice(0, 160);
-    return `${fallback} (API ${response.status}): ${compactBody}`;
-  }
-}
+import { generateHairstyleImage } from '../geminiRest';
 
 interface HairstyleCardProps {
   key?: React.Key | string | number | null;
@@ -40,25 +28,9 @@ export default function HairstyleCard({ suggestion, photo, index, apiKey }: Hair
     setStatus('generating');
     setError(null);
 
-    const formData = new FormData();
-    formData.append('photo', photo);
-    formData.append('prompt', suggestion.prompt);
-
     try {
-      const response = await fetch('/api/generate-hairstyle-image', {
-        method: 'POST',
-        headers: {
-          'X-Gemini-Api-Key': apiKey,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(await getApiError(response, '生成失敗'));
-      }
-
-      const data = await response.json();
-      setImageUrl(data.imageUrl);
+      const generatedImageUrl = await generateHairstyleImage(apiKey, photo, suggestion.prompt);
+      setImageUrl(generatedImageUrl);
       setStatus('success');
     } catch (err: any) {
       console.error(`Error generating image for ${suggestion.name}:`, err);
@@ -140,7 +112,7 @@ export default function HairstyleCard({ suggestion, photo, index, apiKey }: Hair
       });
 
       if (!response.ok) {
-        throw new Error(await getApiError(response, 'Gemini TTS engine error'));
+        throw new Error('Gemini TTS engine error');
       }
 
       const blob = await response.blob();
