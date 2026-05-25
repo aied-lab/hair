@@ -3,6 +3,19 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Loader2, RefreshCw, AlertCircle, Sparkles, CheckCircle, Download, Volume2, VolumeX } from 'lucide-react';
 import { Suggestion } from '../types';
 
+async function getApiError(response: Response, fallback: string) {
+  const bodyText = await response.text().catch(() => '');
+  if (!bodyText) return `${fallback} (API ${response.status})`;
+
+  try {
+    const body = JSON.parse(bodyText);
+    return body.error || body.message || `${fallback} (API ${response.status})`;
+  } catch {
+    const compactBody = bodyText.replace(/\s+/g, ' ').slice(0, 160);
+    return `${fallback} (API ${response.status}): ${compactBody}`;
+  }
+}
+
 interface HairstyleCardProps {
   key?: React.Key | string | number | null;
   suggestion: Suggestion;
@@ -41,8 +54,7 @@ export default function HairstyleCard({ suggestion, photo, index, apiKey }: Hair
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || '生成失敗');
+        throw new Error(await getApiError(response, '生成失敗'));
       }
 
       const data = await response.json();
@@ -128,7 +140,7 @@ export default function HairstyleCard({ suggestion, photo, index, apiKey }: Hair
       });
 
       if (!response.ok) {
-        throw new Error('Gemini TTS engine error');
+        throw new Error(await getApiError(response, 'Gemini TTS engine error'));
       }
 
       const blob = await response.blob();

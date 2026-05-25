@@ -4,6 +4,12 @@ import { getAI, getErrorMessage } from "../src/server/gemini";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 function runUpload(req: Request, res: Response): Promise<void> {
   return new Promise((resolve, reject) => {
     upload.single("photo")(req, res, (error) => {

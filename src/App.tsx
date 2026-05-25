@@ -4,6 +4,19 @@ import { Camera, Upload, Loader2, Sparkles, RefreshCw, Scissors, UserCheck, Comp
 import { HairstyleResult } from './types';
 import HairstyleCard from './components/HairstyleCard';
 
+async function getApiError(response: Response, fallback: string) {
+  const bodyText = await response.text().catch(() => '');
+  if (!bodyText) return `${fallback} (API ${response.status})`;
+
+  try {
+    const body = JSON.parse(bodyText);
+    return body.error || body.message || `${fallback} (API ${response.status})`;
+  } catch {
+    const compactBody = bodyText.replace(/\s+/g, ' ').slice(0, 180);
+    return `${fallback} (API ${response.status}): ${compactBody}`;
+  }
+}
+
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,8 +102,7 @@ export default function App() {
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || '髮型建議生成失敗，請再試一次');
+        throw new Error(await getApiError(response, '髮型建議生成失敗'));
       }
 
       const data = await response.json();
