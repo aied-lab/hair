@@ -1,9 +1,7 @@
 import type { Request, Response } from "express";
-import multer from "multer";
 import { Type } from "@google/genai";
 import { getAI, getErrorMessage } from "../src/server/gemini";
-
-const upload = multer({ storage: multer.memoryStorage() });
+import { parseMultipart } from "../src/server/upload";
 
 export const config = {
   api: {
@@ -11,32 +9,23 @@ export const config = {
   },
 };
 
-function runUpload(req: Request, res: Response): Promise<void> {
-  return new Promise((resolve, reject) => {
-    upload.single("photo")(req, res, (error) => {
-      if (error) reject(error);
-      else resolve();
-    });
-  });
-}
-
 export default async function handler(req: Request, res: Response) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    await runUpload(req, res);
+    const { photo } = await parseMultipart(req);
 
-    if (!req.file) {
+    if (!photo) {
       return res.status(400).json({ error: "No photo uploaded" });
     }
 
     const genAI = getAI(req);
     const imagePart = {
       inlineData: {
-        data: req.file.buffer.toString("base64"),
-        mimeType: req.file.mimetype,
+        data: photo.buffer.toString("base64"),
+        mimeType: photo.mimeType,
       },
     };
 
