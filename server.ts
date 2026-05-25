@@ -2,8 +2,9 @@ import express from "express";
 import path from "path";
 import multer from "multer";
 import dotenv from "dotenv";
-import { GoogleGenAI, Type, Modality } from "@google/genai";
+import { Type, Modality } from "@google/genai";
 import { createServer as createViteServer } from "vite";
+import { getAI, getErrorMessage, pcmToWav } from "./src/server/gemini";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -11,31 +12,6 @@ dotenv.config();
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 const PORT = 3000;
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Unknown server error";
-}
-
-function getRequestApiKey(req: express.Request): string | undefined {
-  const headerValue = req.get("x-gemini-api-key")?.trim();
-  return headerValue || process.env.GEMINI_API_KEY?.trim();
-}
-
-function getAI(req: express.Request): GoogleGenAI {
-  const apiKey = getRequestApiKey(req);
-  if (!apiKey) {
-    throw new Error("請先輸入 Gemini API key");
-  }
-
-  return new GoogleGenAI({
-    apiKey,
-    httpOptions: {
-      headers: {
-        "User-Agent": "aistudio-build",
-      },
-    },
-  });
-}
 
 app.use(express.json());
 
@@ -175,44 +151,6 @@ app.post("/api/generate-hairstyle-image", upload.single("photo"), async (req, re
     res.status(500).json({ error: (error as Error).message || "Failed to generate image" });
   }
 });
-
-// Helper to convert Raw PCM (16-bit, Mono, 24kHz) to a playable WAV file Buffer
-function pcmToWav(pcmBuffer: Buffer, sampleRate: number = 24000): Buffer {
-  const numChannels = 1;
-  const bitsPerSample = 16;
-  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
-  const blockAlign = (numChannels * bitsPerSample) / 8;
-  const wavHeader = Buffer.alloc(44);
-
-  // RIFF identifier
-  wavHeader.write("RIFF", 0);
-  // File length minus 8 bytes
-  wavHeader.writeUInt32LE(36 + pcmBuffer.length, 4);
-  // RIFF type
-  wavHeader.write("WAVE", 8);
-  // Format chunk identifier
-  wavHeader.write("fmt ", 12);
-  // Chunk length (16)
-  wavHeader.writeUInt32LE(16, 16);
-  // Sample format (1 is PCM)
-  wavHeader.writeUInt16LE(1, 20);
-  // Channel count (1)
-  wavHeader.writeUInt16LE(numChannels, 22);
-  // Sample rate
-  wavHeader.writeUInt32LE(sampleRate, 24);
-  // Byte rate
-  wavHeader.writeUInt32LE(byteRate, 28);
-  // Block align
-  wavHeader.writeUInt16LE(blockAlign, 32);
-  // Bits per sample
-  wavHeader.writeUInt16LE(bitsPerSample, 34);
-  // Data chunk identifier
-  wavHeader.write("data", 36);
-  // Data chunk length
-  wavHeader.writeUInt32LE(pcmBuffer.length, 40);
-
-  return Buffer.concat([wavHeader, pcmBuffer]);
-}
 
 // API endpoint for High-quality Gemini TTS
 app.post("/api/tts", async (req, res) => {
