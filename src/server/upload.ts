@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import formidable from "formidable";
-import type { Request } from "express";
+import type { VercelRequest } from "@vercel/node";
 
 export interface UploadedPhoto {
   buffer: Buffer;
@@ -16,7 +16,7 @@ function firstValue<T>(value: T | T[] | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-export async function parseMultipart(req: Request): Promise<ParsedMultipart> {
+export async function parseMultipart(req: VercelRequest): Promise<ParsedMultipart> {
   const form = formidable({
     multiples: false,
     maxFileSize: 8 * 1024 * 1024,

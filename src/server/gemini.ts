@@ -1,19 +1,23 @@
-import type { Request } from "express";
+import type { VercelRequest } from "@vercel/node";
 import { GoogleGenAI } from "@google/genai";
 
 export function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown server error";
 }
 
-export function getRequestApiKey(req: Request | { headers?: Record<string, string | string[] | undefined> }): string | undefined {
-  const directHeader = "get" in req && typeof req.get === "function"
+type HeaderCarrier = Pick<VercelRequest, "headers"> & {
+  get?: (name: string) => string | undefined;
+};
+
+export function getRequestApiKey(req: HeaderCarrier): string | undefined {
+  const directHeader = typeof req.get === "function"
     ? req.get("x-gemini-api-key")
-    : req.headers?.["x-gemini-api-key"];
+    : req.headers["x-gemini-api-key"];
   const headerValue = Array.isArray(directHeader) ? directHeader[0] : directHeader;
   return headerValue?.trim() || process.env.GEMINI_API_KEY?.trim();
 }
 
-export function getAI(req: Request | { headers?: Record<string, string | string[] | undefined> }): GoogleGenAI {
+export function getAI(req: HeaderCarrier): GoogleGenAI {
   const apiKey = getRequestApiKey(req);
   if (!apiKey) {
     throw new Error("請先輸入 Gemini API key");

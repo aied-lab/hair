@@ -1,8 +1,8 @@
-import type { Request, Response } from "express";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { Modality } from "@google/genai";
 import { getAI, getErrorMessage, pcmToWav } from "../src/server/gemini";
 
-async function readJsonBody(req: Request): Promise<any> {
+async function readJsonBody(req: VercelRequest): Promise<any> {
   if (req.body) return typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
   const chunks: Buffer[] = [];
@@ -14,7 +14,7 @@ async function readJsonBody(req: Request): Promise<any> {
   return bodyText ? JSON.parse(bodyText) : {};
 }
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }

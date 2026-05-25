@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { Type } from "@google/genai";
 import { getAI, getErrorMessage } from "../src/server/gemini";
 import { parseMultipart } from "../src/server/upload";
@@ -9,7 +9,7 @@ export const config = {
   },
 };
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
